@@ -61,9 +61,9 @@ type Person struct {
 }
 
 type Name struct {
-	GivenNames  Value `json:"given-names"`
-	FamilyName  Value `json:"family-name"`
-	CreditName  Value `json:"credit-name"`
+	GivenNames Value `json:"given-names"`
+	FamilyName Value `json:"family-name"`
+	CreditName Value `json:"credit-name"`
 }
 
 type Value struct {
@@ -84,10 +84,10 @@ type WorkGroup struct {
 }
 
 type WorkSummary struct {
-	PutCode       int         `json:"put-code"`
-	Title         Title       `json:"title"`
-	Type          string      `json:"type"`
-	LastModified  LastModified `json:"last-modified-date"`
+	PutCode      int          `json:"put-code"`
+	Title        Title        `json:"title"`
+	Type         string       `json:"type"`
+	LastModified LastModified `json:"last-modified-date"`
 }
 
 type EmploymentSummaryGroup struct {
@@ -99,10 +99,10 @@ type AffiliationGroup struct {
 }
 
 type EmploymentSummary struct {
-	PutCode           int    `json:"put-code"`
-	DepartmentName    string `json:"department-name"`
-	RoleTitle         string `json:"role-title"`
-	Organization      Org    `json:"organization"`
+	PutCode        int    `json:"put-code"`
+	DepartmentName string `json:"department-name"`
+	RoleTitle      string `json:"role-title"`
+	Organization   Org    `json:"organization"`
 }
 
 type Org struct {
@@ -119,8 +119,8 @@ type LastModified struct {
 
 // SearchResponse represents a search result
 type SearchResponse struct {
-	Result []SearchResult `json:"result"`
-	NumFound int `json:"num-found"`
+	Result   []SearchResult `json:"result"`
+	NumFound int            `json:"num-found"`
 }
 
 type SearchResult struct {
@@ -132,7 +132,7 @@ type SearchResult struct {
 var (
 	// Store works and employments by ORCID -> PutCode -> Data
 	// For simplicity, we store raw JSON bytes to mock persistence
-	dataStore = make(map[string]map[string]map[int][]byte)
+	dataStore  = make(map[string]map[string]map[int][]byte)
 	storeMutex sync.RWMutex
 )
 
@@ -160,7 +160,7 @@ func main() {
 	mux.HandleFunc("GET /v3.0/{orcid}/work/{putCode}", handleGetWork)
 	mux.HandleFunc("POST /v3.0/{orcid}/work", handlePostWork)
 	mux.HandleFunc("PUT /v3.0/{orcid}/work/{putCode}", handlePutWork)
-	
+
 	// 4. Employment (GET, POST, PUT, DELETE)
 	mux.HandleFunc("GET /v3.0/{orcid}/employment/{putCode}", handleGetEmployment)
 	mux.HandleFunc("POST /v3.0/{orcid}/employment", handlePostEmployment)
@@ -183,13 +183,13 @@ func main() {
 func middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		
+
 		// Set default headers
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
 		next.ServeHTTP(w, r)
-		
+
 		slog.Info("", "method", r.Method, "path", r.URL.Path, "duration", time.Since(start))
 	})
 }
@@ -219,7 +219,7 @@ func handleToken(w http.ResponseWriter, r *http.Request) {
 
 func handleGetRecord(w http.ResponseWriter, r *http.Request) {
 	orcid := r.PathValue("orcid")
-	
+
 	// Construct a mock full record
 	record := OrcidRecord{
 		OrcidIdentifier: OrcidIdentifier{
@@ -240,9 +240,9 @@ func handleGetRecord(w http.ResponseWriter, r *http.Request) {
 					{
 						WorkSummary: []WorkSummary{
 							{
-								PutCode: 123456,
-								Title: Title{Title: Value{Value: "Mock Paper Title"}},
-								Type: "journal-article",
+								PutCode:      123456,
+								Title:        Title{Title: Value{Value: "Mock Paper Title"}},
+								Type:         "journal-article",
 								LastModified: LastModified{Value: time.Now().UnixMilli()},
 							},
 						},
@@ -254,10 +254,10 @@ func handleGetRecord(w http.ResponseWriter, r *http.Request) {
 					{
 						Summaries: []EmploymentSummary{
 							{
-								PutCode: 789012,
+								PutCode:        789012,
 								DepartmentName: "Computer Science",
-								RoleTitle: "Associate Professor",
-								Organization: Org{Name: "Mock University"},
+								RoleTitle:      "Associate Professor",
+								Organization:   Org{Name: "Mock University"},
 							},
 						},
 					},
@@ -275,9 +275,9 @@ func handleGetWork(w http.ResponseWriter, r *http.Request) {
 	// In a real mock, you'd fetch specific JSON from dataStore
 	// Here we return a generic work for any putCode
 	putCode, _ := strconv.Atoi(r.PathValue("putCode"))
-	
+
 	response := map[string]interface{}{
-		"type": "work",
+		"type":     "work",
 		"put-code": putCode,
 		"title": map[string]interface{}{
 			"title": map[string]string{"value": "Retrieved Mock Work"},
@@ -286,7 +286,7 @@ func handleGetWork(w http.ResponseWriter, r *http.Request) {
 			"year": map[string]string{"value": "2023"},
 		},
 	}
-	
+
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -301,7 +301,7 @@ func handlePostWork(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Location", fmt.Sprintf("https://api.orcid.org/v3.0/%s/work/%d", orcid, newPutCode))
 	w.WriteHeader(http.StatusCreated)
-	
+
 	// ORCID returns the put-code in the body as well sometimes, or just empty 201
 	// We'll mimic returning the put-code for convenience
 	json.NewEncoder(w).Encode(map[string]interface{}{
@@ -314,24 +314,24 @@ func handlePutWork(w http.ResponseWriter, r *http.Request) {
 	putCode := r.PathValue("putCode")
 
 	// Update logic would go here
-	
+
 	w.Header().Set("Location", fmt.Sprintf("https://api.orcid.org/v3.0/%s/work/%s", orcid, putCode))
 	w.WriteHeader(http.StatusOK)
-	
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"put-code": putCode,
-		"status": "updated",
+		"status":   "updated",
 	})
 }
 
 func handleGetEmployment(w http.ResponseWriter, r *http.Request) {
 	putCode, _ := strconv.Atoi(r.PathValue("putCode"))
-	
+
 	response := map[string]interface{}{
-		"put-code": putCode,
+		"put-code":        putCode,
 		"department-name": "Mock Department",
-		"role-title": "Mock Researcher",
-		"organization": map[string]string{"name": "Mock Org"},
+		"role-title":      "Mock Researcher",
+		"organization":    map[string]string{"name": "Mock Org"},
 		"start-date": map[string]interface{}{
 			"year": map[string]string{"value": "2020"},
 		},
@@ -345,7 +345,7 @@ func handlePostEmployment(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Location", fmt.Sprintf("https://api.orcid.org/v3.0/%s/employment/%d", orcid, newPutCode))
 	w.WriteHeader(http.StatusCreated)
-	
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"put-code": newPutCode,
 	})
@@ -354,19 +354,19 @@ func handlePostEmployment(w http.ResponseWriter, r *http.Request) {
 func handlePutEmployment(w http.ResponseWriter, r *http.Request) {
 	orcid := r.PathValue("orcid")
 	putCode := r.PathValue("putCode")
-	
+
 	w.Header().Set("Location", fmt.Sprintf("https://api.orcid.org/v3.0/%s/employment/%s", orcid, putCode))
 	w.WriteHeader(http.StatusOK)
-	
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"put-code": putCode,
-		"status": "updated",
+		"status":   "updated",
 	})
 }
 
 func handleSearch(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
-	
+
 	// Simple mock: if query contains "error", return error, else return fake results
 	if strings.Contains(query, "error") {
 		http.Error(w, "Search failed", http.StatusInternalServerError)
@@ -385,6 +385,6 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 			},
 		},
 	}
-	
+
 	json.NewEncoder(w).Encode(resp)
 }
