@@ -152,6 +152,7 @@ func main() {
 
 	// 1. OAuth Token Endpoint
 	mux.HandleFunc("POST /oauth/token", handleToken)
+	mux.HandleFunc("GET /oauth/authorize", handleAuthorize)
 
 	// 2. Record Retrieval (Public & Member)
 	mux.HandleFunc("GET /v3.0/{orcid}/record", handleGetRecord)
@@ -215,6 +216,28 @@ func handleToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(resp)
+}
+
+func handleAuthorize(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query()
+	redirectURI := query.Get("redirect_uri")
+	state := query.Get("state")
+
+	if redirectURI == "" {
+		http.Error(w, "Missing redirect_uri", http.StatusBadRequest)
+		return
+	}
+
+	// In a real app, we would show a login screen here.
+	// Since this is a mock, we immediately redirect with a code.
+
+	code := "mock-auth-code-12345"
+	target := fmt.Sprintf("%s?code=%s", redirectURI, code)
+	if state != "" {
+		target += "&state=" + state
+	}
+
+	http.Redirect(w, r, target, http.StatusFound)
 }
 
 func handleGetRecord(w http.ResponseWriter, r *http.Request) {
