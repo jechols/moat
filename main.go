@@ -3,7 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"os"
@@ -175,7 +175,9 @@ func main() {
 	port := getPort()
 	fmt.Printf("ORCID v3 Mock Service running on %s\n", port)
 	fmt.Printf("Try: curl -X POST http://localhost%s/oauth/token -d 'client_id=APP-123&grant_type=client_credentials'\n", port)
-	log.Fatal(http.ListenAndServe(port, handler))
+	if err := http.ListenAndServe(port, handler); err != nil {
+		slog.Error("Unable to start MOAT", "error", err)
+	}
 }
 
 func middleware(next http.Handler) http.Handler {
@@ -188,7 +190,7 @@ func middleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 		
-		log.Printf("%s %s %v", r.Method, r.URL.Path, time.Since(start))
+		slog.Info("", "method", r.Method, "path", r.URL.Path, "duration", time.Since(start))
 	})
 }
 
