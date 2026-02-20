@@ -9,9 +9,7 @@ operations (Works, Employment) without relying on the external ORCID sandbox.
 ## Environment & Setup
 
 - **Language**: Go
-- **Go Version Warning**: `go.mod` specifies `go 1.25.3`, but the environment
-  may be running an older version (e.g., 1.24.x). This may cause LSP errors but
-  standard library code should largely remain compatible.
+- **Go Version Note**: `go.mod` specifies `go 1.25.3`. **Do not alter this**.
 - **Dependencies**: Standard library only (no external modules).
 
 ## Essential Commands
@@ -77,9 +75,6 @@ Mocked endpoints (prefix: `http://localhost:8080`):
      "error").
 3. **Configuration**: Port is configurable via `MOAT_PORT` (or `PORT`),
    defaulting to `:8080`.
-4. **Go Version**: If you encounter "requires go >= 1.25.3" errors, you may
-   need to edit `go.mod` to match the local Go version or ignore the warning if
-   compilation succeeds.
 
 ## Development Patterns
 
