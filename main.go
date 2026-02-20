@@ -134,6 +134,9 @@ var (
 	// For simplicity, we store raw JSON bytes to mock persistence
 	dataStore  = make(map[string]map[string]map[int][]byte)
 	storeMutex sync.RWMutex
+
+	// Version is injected at build time
+	Version = "dev"
 )
 
 func init() {
@@ -174,7 +177,7 @@ func main() {
 	handler := middleware(mux)
 
 	port := getPort()
-	fmt.Printf("ORCID v3 Mock Service running on %s\n", port)
+	fmt.Printf("ORCID v3 Mock Service running on %s (Version: %s)\n", port, Version)
 	fmt.Printf("Try: curl -X POST http://localhost%s/oauth/token -d 'client_id=APP-123&grant_type=client_credentials'\n", port)
 	if err := http.ListenAndServe(port, handler); err != nil {
 		slog.Error("Unable to start MOAT", "error", err)
