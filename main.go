@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/rand"
 	"net/http"
@@ -253,7 +255,21 @@ func middleware(next http.Handler) http.Handler {
 			}
 		}
 
-		slog.Debug("Handling request", "handler-name", handlerName)
+		// Prepare body for logging
+		var bodyLog string
+		if r.Body != nil {
+			bodyBytes, _ := io.ReadAll(r.Body)
+			r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+			if len(bodyBytes) > 0 {
+				bodyLog = string(bodyBytes)
+			}
+		}
+
+		slog.Debug("Handling request",
+			"handler-name", handlerName,
+			"headers", r.Header,
+			"body", bodyLog,
+		)
 
 		// Set default headers
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
