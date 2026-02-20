@@ -161,19 +161,35 @@ type SearchResult struct {
 var (
 	// Store works and employments by ORCID -> PutCode -> Data
 	// For simplicity, we store raw JSON bytes to mock persistence
-	dataStore  = make(map[string]map[string]map[int][]byte)
-	storeMutex sync.RWMutex
+	dataStore   = make(map[string]map[string]map[int][]byte)
+	personStore = make(map[string]OrcidRecord)
+	storeMutex  sync.RWMutex
 
 	// Version is injected at build time
 	Version = "dev"
 )
 
 func init() {
-	// Initialize store for a demo user
-	demoOrcid := "0000-0001-2345-6789"
-	dataStore[demoOrcid] = map[string]map[int][]byte{
-		"work":       make(map[int][]byte),
-		"employment": make(map[int][]byte),
+	// Initialize store with demo users
+	people := []struct {
+		orcid, given, family, bio string
+	}{
+		{"0000-0001-2345-6789", "Sofia", "Garcia", "Sofia Garcia is a researcher in the field of Computer Science."},
+		{"0000-0002-1001-2002", "John", "Smith", "John Smith studies Physics."},
+		{"0000-0003-3003-4004", "Wei", "Chen", "Wei Chen is a Biologist."},
+		{"0000-0004-5005-6006", "Priya", "Patel", "Priya Patel works in Chemistry."},
+		{"0000-0005-7007-8008", "Ahmed", "Al-Fayed", "Ahmed Al-Fayed is a Mathematician."},
+		{"0000-0006-9009-0000", "Elena", "Popov", "Elena Popov researches History."},
+	}
+
+	for _, p := range people {
+		rec := createMockRecord(p.orcid, p.given, p.family, p.bio)
+		personStore[p.orcid] = rec
+
+		dataStore[p.orcid] = map[string]map[int][]byte{
+			"work":       make(map[int][]byte),
+			"employment": make(map[int][]byte),
+		}
 	}
 }
 
@@ -313,110 +329,31 @@ func handleAuthorize(w http.ResponseWriter, r *http.Request) {
 func handleGetRecord(w http.ResponseWriter, r *http.Request) {
 	orcid := r.PathValue("orcid")
 
-	// Construct a mock full record
-	record := OrcidRecord{
-		OrcidIdentifier: OrcidIdentifier{
-			Uri:  fmt.Sprintf("https://orcid.org/%s", orcid),
-			Path: orcid,
-			Host: "orcid.org",
-		},
-		Person: Person{
-			Name: Name{
-				GivenNames: Value{Value: "Sofia"},
-				FamilyName: Value{Value: "Garcia"},
-				CreditName: Value{Value: "S. Garcia"},
-			},
-			Biography: &Biography{
-				Content: "Sofia Garcia is a researcher in the field of Computer Science.",
-			},
-			Emails: &Emails{
-				Email: []Email{
-					{
-						Email:      "sofia.garcia@mock.edu",
-						Verified:   true,
-						Primary:    true,
-						Visibility: "PUBLIC",
-					},
-				},
-			},
-			ResearcherUrls: &ResearcherUrls{
-				ResearcherUrl: []ResearcherUrl{
-					{
-						UrlName: "Personal Website",
-						Url:     Value{Value: "https://sofia.garcia.mock"},
-					},
-				},
-			},
-		},
-		Activities: Activities{
-			Works: WorkSummaryGroup{
-				Group: []WorkGroup{
-					{
-						WorkSummary: []WorkSummary{
-							{
-								PutCode:      123456,
-								Title:        Title{Title: Value{Value: "Mock Paper Title"}},
-								Type:         "journal-article",
-								LastModified: LastModified{Value: time.Now().UnixMilli()},
-							},
-						},
-					},
-				},
-			},
-			Employment: EmploymentSummaryGroup{
-				AffiliationGroup: []AffiliationGroup{
-					{
-						Summaries: []EmploymentSummary{
-							{
-								PutCode:        789012,
-								DepartmentName: "Computer Science",
-								RoleTitle:      "Associate Professor",
-								Organization:   Org{Name: "Mock University"},
-							},
-						},
-					},
-				},
-			},
-		},
+	storeMutex.RLock()
+	record, ok := personStore[orcid]
+	storeMutex.RUnlock()
+
+	if !ok {
+		http.Error(w, "Record not found", http.StatusNotFound)
+		return
 	}
 
 	json.NewEncoder(w).Encode(record)
 }
 
 func handleGetPerson(w http.ResponseWriter, r *http.Request) {
-	// orcid := r.PathValue("orcid") // Not used in simple mock but good to have
+	orcid := r.PathValue("orcid")
 
-	// Construct a mock person response
-	person := Person{
-		Name: Name{
-			GivenNames: Value{Value: "Sofia"},
-			FamilyName: Value{Value: "Garcia"},
-			CreditName: Value{Value: "S. Garcia"},
-		},
-		Biography: &Biography{
-			Content: "Sofia Garcia is a researcher in the field of Computer Science.",
-		},
-		Emails: &Emails{
-			Email: []Email{
-				{
-					Email:      "sofia.garcia@mock.edu",
-					Verified:   true,
-					Primary:    true,
-					Visibility: "PUBLIC",
-				},
-			},
-		},
-		ResearcherUrls: &ResearcherUrls{
-			ResearcherUrl: []ResearcherUrl{
-				{
-					UrlName: "Personal Website",
-					Url:     Value{Value: "https://sofia.garcia.mock"},
-				},
-			},
-		},
+	storeMutex.RLock()
+	record, ok := personStore[orcid]
+	storeMutex.RUnlock()
+
+	if !ok {
+		http.Error(w, "Person not found", http.StatusNotFound)
+		return
 	}
 
-	json.NewEncoder(w).Encode(person)
+	json.NewEncoder(w).Encode(record.Person)
 }
 
 // --- Generic Activity Handlers ---
@@ -537,4 +474,72 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(resp)
+}
+
+func createMockRecord(orcid, givenName, familyName, bio string) OrcidRecord {
+	return OrcidRecord{
+		OrcidIdentifier: OrcidIdentifier{
+			Uri:  fmt.Sprintf("https://orcid.org/%s", orcid),
+			Path: orcid,
+			Host: "orcid.org",
+		},
+		Person: Person{
+			Name: Name{
+				GivenNames: Value{Value: givenName},
+				FamilyName: Value{Value: familyName},
+				CreditName: Value{Value: fmt.Sprintf("%s. %s", string(givenName[0]), familyName)},
+			},
+			Biography: &Biography{
+				Content: bio,
+			},
+			Emails: &Emails{
+				Email: []Email{
+					{
+						Email:      fmt.Sprintf("%s.%s@mock.edu", strings.ToLower(givenName), strings.ToLower(familyName)),
+						Verified:   true,
+						Primary:    true,
+						Visibility: "PUBLIC",
+					},
+				},
+			},
+			ResearcherUrls: &ResearcherUrls{
+				ResearcherUrl: []ResearcherUrl{
+					{
+						UrlName: "Personal Website",
+						Url:     Value{Value: fmt.Sprintf("https://%s.%s.mock", strings.ToLower(givenName), strings.ToLower(familyName))},
+					},
+				},
+			},
+		},
+		Activities: Activities{
+			Works: WorkSummaryGroup{
+				Group: []WorkGroup{
+					{
+						WorkSummary: []WorkSummary{
+							{
+								PutCode:      123456,
+								Title:        Title{Title: Value{Value: "Mock Paper Title"}},
+								Type:         "journal-article",
+								LastModified: LastModified{Value: time.Now().UnixMilli()},
+							},
+						},
+					},
+				},
+			},
+			Employment: EmploymentSummaryGroup{
+				AffiliationGroup: []AffiliationGroup{
+					{
+						Summaries: []EmploymentSummary{
+							{
+								PutCode:        789012,
+								DepartmentName: "Mock Department",
+								RoleTitle:      "Mock Researcher",
+								Organization:   Org{Name: "Mock University"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }
