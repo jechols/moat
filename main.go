@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -151,6 +153,13 @@ func init() {
 // --- Handlers ---
 
 func main() {
+	// Configure structured logger with Debug level
+	opts := &slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
+	slog.SetDefault(logger)
+
 	mux := http.NewServeMux()
 
 	// 1. OAuth Token Endpoint
@@ -188,14 +197,44 @@ func middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
+		// Try to extract handler name if next is a ServeMux
+		handlerName := "unknown"
+		if mux, ok := next.(*http.ServeMux); ok {
+			if h, pattern := mux.Handler(r); pattern != "" {
+				name := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+				if idx := strings.LastIndex(name, "."); idx != -1 {
+					name = name[idx+1:]
+				}
+				handlerName = name
+			}
+		}
+
+		slog.Debug("Handling request", "handler-name", handlerName)
+
 		// Set default headers
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
-		next.ServeHTTP(w, r)
+		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(rw, r)
 
-		slog.Info("", "method", r.Method, "path", r.URL.Path, "duration", time.Since(start))
+		slog.Info("Request processed",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rw.status,
+			"duration", time.Since(start),
+		)
 	})
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.status = code
+	rw.ResponseWriter.WriteHeader(code)
 }
 
 // --- Endpoint Implementations ---
