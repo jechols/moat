@@ -59,7 +59,34 @@ type OrcidIdentifier struct {
 }
 
 type Person struct {
-	Name Name `json:"name"`
+	Name           Name           `json:"name"`
+	Biography      *Biography     `json:"biography,omitempty"`
+	Emails         *Emails        `json:"emails,omitempty"`
+	ResearcherUrls *ResearcherUrls `json:"researcher-urls,omitempty"`
+}
+
+type Biography struct {
+	Content string `json:"content"`
+}
+
+type Emails struct {
+	Email []Email `json:"email"`
+}
+
+type Email struct {
+	Email string `json:"email"`
+	Verified bool `json:"verified"`
+	Primary bool `json:"primary"`
+	Visibility string `json:"visibility"`
+}
+
+type ResearcherUrls struct {
+	ResearcherUrl []ResearcherUrl `json:"researcher-url"`
+}
+
+type ResearcherUrl struct {
+	UrlName string `json:"url-name"`
+	Url     Value  `json:"url"`
 }
 
 type Name struct {
@@ -168,6 +195,7 @@ func main() {
 
 	// 2. Record Retrieval (Public & Member)
 	mux.HandleFunc("GET /v3.0/{orcid}/record", handleGetRecord)
+	mux.HandleFunc("GET /v3.0/{orcid}/person", handleGetPerson)
 
 	// 3. Works (GET, POST, PUT, DELETE)
 	mux.HandleFunc("GET /v3.0/{orcid}/work/{putCode}", handleGetWork)
@@ -298,6 +326,27 @@ func handleGetRecord(w http.ResponseWriter, r *http.Request) {
 				FamilyName: Value{Value: "Garcia"},
 				CreditName: Value{Value: "S. Garcia"},
 			},
+			Biography: &Biography{
+				Content: "Sofia Garcia is a researcher in the field of Computer Science.",
+			},
+			Emails: &Emails{
+				Email: []Email{
+					{
+						Email:      "sofia.garcia@mock.edu",
+						Verified:   true,
+						Primary:    true,
+						Visibility: "PUBLIC",
+					},
+				},
+			},
+			ResearcherUrls: &ResearcherUrls{
+				ResearcherUrl: []ResearcherUrl{
+					{
+						UrlName: "Personal Website",
+						Url:     Value{Value: "https://sofia.garcia.mock"},
+					},
+				},
+			},
 		},
 		Activities: Activities{
 			Works: WorkSummaryGroup{
@@ -332,6 +381,42 @@ func handleGetRecord(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(record)
+}
+
+func handleGetPerson(w http.ResponseWriter, r *http.Request) {
+	// orcid := r.PathValue("orcid") // Not used in simple mock but good to have
+
+	// Construct a mock person response
+	person := Person{
+		Name: Name{
+			GivenNames: Value{Value: "Sofia"},
+			FamilyName: Value{Value: "Garcia"},
+			CreditName: Value{Value: "S. Garcia"},
+		},
+		Biography: &Biography{
+			Content: "Sofia Garcia is a researcher in the field of Computer Science.",
+		},
+		Emails: &Emails{
+			Email: []Email{
+				{
+					Email:      "sofia.garcia@mock.edu",
+					Verified:   true,
+					Primary:    true,
+					Visibility: "PUBLIC",
+				},
+			},
+		},
+		ResearcherUrls: &ResearcherUrls{
+			ResearcherUrl: []ResearcherUrl{
+				{
+					UrlName: "Personal Website",
+					Url:     Value{Value: "https://sofia.garcia.mock"},
+				},
+			},
+		},
+	}
+
+	json.NewEncoder(w).Encode(person)
 }
 
 // --- Generic Activity Handlers ---
