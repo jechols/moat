@@ -58,11 +58,13 @@ curl "http://localhost:8080/v3.0/search?q=test"
 ## API Surface
 
 Mocked endpoints (prefix: `http://localhost:8080`):
-- `POST /oauth/token` - Returns static mock token.
+- `POST /oauth/token` - Returns static mock token. (Always JSON)
 - `GET /v3.0/{orcid}/record` - Returns hardcoded full profile.
 - `GET /v3.0/search` - returns static search results.
 - `GET/POST/PUT /v3.0/{orcid}/work/*` - Mock work operations.
 - `GET/POST/PUT /v3.0/{orcid}/employment/*` - Mock employment operations.
+
+**Note**: All `/v3.0/*` endpoints default to **XML** responses unless `Accept: application/json` header is present. This mimics the real ORCID API behavior.
 
 ## Gotchas & Limitations
 

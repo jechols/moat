@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"log/slog"
@@ -49,113 +50,115 @@ type TokenResponse struct {
 
 // OrcidRecord represents the root of the record response
 type OrcidRecord struct {
-	OrcidIdentifier OrcidIdentifier `json:"orcid-identifier"`
-	Person          Person          `json:"person"`
-	Activities      Activities      `json:"activities-summary"`
+	XMLName         xml.Name        `json:"-" xml:"record"`
+	OrcidIdentifier OrcidIdentifier `json:"orcid-identifier" xml:"orcid-identifier"`
+	Person          Person          `json:"person" xml:"person"`
+	Activities      Activities      `json:"activities-summary" xml:"activities-summary"`
 }
 
 type OrcidIdentifier struct {
-	Uri  string `json:"uri"`
-	Path string `json:"path"`
-	Host string `json:"host"`
+	Uri  string `json:"uri" xml:"uri"`
+	Path string `json:"path" xml:"path"`
+	Host string `json:"host" xml:"host"`
 }
 
 type Person struct {
-	Name           Name           `json:"name"`
-	Biography      *Biography     `json:"biography,omitempty"`
-	Emails         *Emails        `json:"emails,omitempty"`
-	ResearcherUrls *ResearcherUrls `json:"researcher-urls,omitempty"`
+	Name           Name            `json:"name" xml:"name"`
+	Biography      *Biography      `json:"biography,omitempty" xml:"biography,omitempty"`
+	Emails         *Emails         `json:"emails,omitempty" xml:"emails,omitempty"`
+	ResearcherUrls *ResearcherUrls `json:"researcher-urls,omitempty" xml:"researcher-urls,omitempty"`
 }
 
 type Biography struct {
-	Content string `json:"content"`
+	Content string `json:"content" xml:"content"`
 }
 
 type Emails struct {
-	Email []Email `json:"email"`
+	Email []Email `json:"email" xml:"email"`
 }
 
 type Email struct {
-	Email string `json:"email"`
-	Verified bool `json:"verified"`
-	Primary bool `json:"primary"`
-	Visibility string `json:"visibility"`
+	Email      string `json:"email" xml:"email"`
+	Verified   bool   `json:"verified" xml:"verified"`
+	Primary    bool   `json:"primary" xml:"primary"`
+	Visibility string `json:"visibility" xml:"visibility"`
 }
 
 type ResearcherUrls struct {
-	ResearcherUrl []ResearcherUrl `json:"researcher-url"`
+	ResearcherUrl []ResearcherUrl `json:"researcher-url" xml:"researcher-url"`
 }
 
 type ResearcherUrl struct {
-	UrlName string `json:"url-name"`
-	Url     Value  `json:"url"`
+	UrlName string `json:"url-name" xml:"url-name"`
+	Url     Value  `json:"url" xml:"url"`
 }
 
 type Name struct {
-	GivenNames Value `json:"given-names"`
-	FamilyName Value `json:"family-name"`
-	CreditName Value `json:"credit-name"`
+	GivenNames Value `json:"given-names" xml:"given-names"`
+	FamilyName Value `json:"family-name" xml:"family-name"`
+	CreditName Value `json:"credit-name" xml:"credit-name"`
 }
 
 type Value struct {
-	Value string `json:"value"`
+	Value string `json:"value" xml:"value"`
 }
 
 type Activities struct {
-	Works      WorkSummaryGroup       `json:"works"`
-	Employment EmploymentSummaryGroup `json:"employments"`
+	Works      WorkSummaryGroup       `json:"works" xml:"works"`
+	Employment EmploymentSummaryGroup `json:"employments" xml:"employments"`
 }
 
 type WorkSummaryGroup struct {
-	Group []WorkGroup `json:"group"`
+	Group []WorkGroup `json:"group" xml:"group"`
 }
 
 type WorkGroup struct {
-	WorkSummary []WorkSummary `json:"work-summary"`
+	WorkSummary []WorkSummary `json:"work-summary" xml:"work-summary"`
 }
 
 type WorkSummary struct {
-	PutCode      int          `json:"put-code"`
-	Title        Title        `json:"title"`
-	Type         string       `json:"type"`
-	LastModified LastModified `json:"last-modified-date"`
+	PutCode      int          `json:"put-code" xml:"put-code"`
+	Title        Title        `json:"title" xml:"title"`
+	Type         string       `json:"type" xml:"type"`
+	LastModified LastModified `json:"last-modified-date" xml:"last-modified-date"`
 }
 
 type EmploymentSummaryGroup struct {
-	AffiliationGroup []AffiliationGroup `json:"affiliation-group"`
+	AffiliationGroup []AffiliationGroup `json:"affiliation-group" xml:"affiliation-group"`
 }
 
 type AffiliationGroup struct {
-	Summaries []EmploymentSummary `json:"employment-summary"`
+	Summaries []EmploymentSummary `json:"employment-summary" xml:"employment-summary"`
 }
 
 type EmploymentSummary struct {
-	PutCode        int    `json:"put-code"`
-	DepartmentName string `json:"department-name"`
-	RoleTitle      string `json:"role-title"`
-	Organization   Org    `json:"organization"`
+	PutCode        int    `json:"put-code" xml:"put-code"`
+	DepartmentName string `json:"department-name" xml:"department-name"`
+	RoleTitle      string `json:"role-title" xml:"role-title"`
+	Organization   Org    `json:"organization" xml:"organization"`
 }
 
 type Org struct {
-	Name string `json:"name"`
+	Name string `json:"name" xml:"name"`
 }
 
 type Title struct {
-	Title Value `json:"title"`
+	Title Value `json:"title" xml:"title"`
 }
 
 type LastModified struct {
-	Value int64 `json:"value"` // Unix timestamp
+	Value int64 `json:"value" xml:"value"` // Unix timestamp
 }
 
 // SearchResponse represents a search result
 type SearchResponse struct {
-	Result   []SearchResult `json:"result"`
-	NumFound int            `json:"num-found"`
+	XMLName  xml.Name       `json:"-" xml:"search:search"`
+	Result   []SearchResult `json:"result" xml:"result"`
+	NumFound int            `json:"num-found" xml:"num-found"`
 }
 
 type SearchResult struct {
-	OrcidIdentifier OrcidIdentifier `json:"orcid-identifier"`
+	OrcidIdentifier OrcidIdentifier `json:"orcid-identifier" xml:"orcid-identifier"`
 }
 
 // --- In-Memory Store ---
@@ -228,7 +231,7 @@ func main() {
 	// 5. Search
 	mux.HandleFunc("GET /v3.0/search", handleSearch)
 
-	// Middleware for logging and JSON content type
+	// Middleware for logging and content type
 	handler := middleware(mux)
 
 	port := getPort()
@@ -271,8 +274,8 @@ func middleware(next http.Handler) http.Handler {
 			"body", bodyLog,
 		)
 
-		// Set default headers
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		// We do NOT set default Content-Type here anymore, because it depends on the endpoint and accept header.
+		// However, we can set a safe default like JSON if we want, but writeResponse will override it.
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
@@ -297,6 +300,46 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
+// writeResponse handles content negotiation for /v3.0/ endpoints
+func writeResponse(w http.ResponseWriter, r *http.Request, data interface{}) {
+	accept := r.Header.Get("Accept")
+
+	// Check if request is for /v3.0/
+	isV3 := strings.HasPrefix(r.URL.Path, "/v3.0/")
+
+	// Default to JSON unless it's v3.0 AND (JSON is NOT explicitly requested OR XML IS requested)
+	// Actually, easier logic:
+	// If Accept contains "json", use JSON.
+	// Else if isV3, use XML.
+	// Else default to JSON.
+
+	useXML := false
+	if isV3 {
+		if strings.Contains(accept, "application/json") {
+			useXML = false
+		} else {
+			// If JSON is not requested, default to XML for v3.0
+			useXML = true
+		}
+	} else {
+		// Non-v3 endpoints (like oauth) default to JSON
+		useXML = false
+	}
+
+	if useXML {
+		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+		w.Write([]byte(xml.Header))
+		if err := xml.NewEncoder(w).Encode(data); err != nil {
+			slog.Error("Failed to encode XML response", "error", err)
+		}
+	} else {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		if err := json.NewEncoder(w).Encode(data); err != nil {
+			slog.Error("Failed to encode JSON response", "error", err)
+		}
+	}
+}
+
 // --- Endpoint Implementations ---
 
 func handleToken(w http.ResponseWriter, r *http.Request) {
@@ -317,6 +360,8 @@ func handleToken(w http.ResponseWriter, r *http.Request) {
 		ORCID:        "0000-0001-2345-6789",
 	}
 
+	// Token endpoint always returns JSON
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	json.NewEncoder(w).Encode(resp)
 }
 
@@ -354,7 +399,7 @@ func handleGetRecord(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(record)
+	writeResponse(w, r, record)
 }
 
 func handleGetPerson(w http.ResponseWriter, r *http.Request) {
@@ -369,28 +414,41 @@ func handleGetPerson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(record.Person)
+	writeResponse(w, r, record.Person)
 }
 
 // --- Generic Activity Handlers ---
+
+// Helper struct for generic responses (needs XML tags too)
+type GenericWorkResponse struct {
+	XMLName         xml.Name `json:"-" xml:"work:work"`
+	Type            string   `json:"type" xml:"type"`
+	PutCode         int      `json:"put-code" xml:"put-code"`
+	Title           Title    `json:"title" xml:"title"`
+	PublicationDate DateYear `json:"publication-date" xml:"publication-date"`
+}
+
+type DateYear struct {
+	Year Value `json:"year" xml:"year"`
+}
 
 func handleGetWork(w http.ResponseWriter, r *http.Request) {
 	// In a real mock, you'd fetch specific JSON from dataStore
 	// Here we return a generic work for any putCode
 	putCode, _ := strconv.Atoi(r.PathValue("putCode"))
 
-	response := map[string]interface{}{
-		"type":     "work",
-		"put-code": putCode,
-		"title": map[string]interface{}{
-			"title": map[string]string{"value": "Retrieved Mock Work"},
+	response := GenericWorkResponse{
+		Type:    "work",
+		PutCode: putCode,
+		Title: Title{
+			Title: Value{Value: "Retrieved Mock Work"},
 		},
-		"publication-date": map[string]interface{}{
-			"year": map[string]string{"value": "2023"},
+		PublicationDate: DateYear{
+			Year: Value{Value: "2023"},
 		},
 	}
 
-	json.NewEncoder(w).Encode(response)
+	writeResponse(w, r, response)
 }
 
 func handlePostWork(w http.ResponseWriter, r *http.Request) {
@@ -407,9 +465,13 @@ func handlePostWork(w http.ResponseWriter, r *http.Request) {
 
 	// ORCID returns the put-code in the body as well sometimes, or just empty 201
 	// We'll mimic returning the put-code for convenience
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"put-code": newPutCode,
-	})
+	// Create a simple struct for this response
+	type PutCodeResponse struct {
+		XMLName xml.Name `json:"-" xml:"response"`
+		PutCode int      `json:"put-code" xml:"put-code"`
+	}
+
+	writeResponse(w, r, PutCodeResponse{PutCode: newPutCode})
 }
 
 func handlePutWork(w http.ResponseWriter, r *http.Request) {
@@ -421,25 +483,38 @@ func handlePutWork(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Location", fmt.Sprintf("https://api.orcid.org/v3.0/%s/work/%s", orcid, putCode))
 	w.WriteHeader(http.StatusOK)
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"put-code": putCode,
-		"status":   "updated",
-	})
+	type UpdateResponse struct {
+		XMLName xml.Name `json:"-" xml:"response"`
+		PutCode string   `json:"put-code" xml:"put-code"`
+		Status  string   `json:"status" xml:"status"`
+	}
+
+	writeResponse(w, r, UpdateResponse{PutCode: putCode, Status: "updated"})
+}
+
+// Helper structs for employment
+type GenericEmploymentResponse struct {
+	XMLName        xml.Name `json:"-" xml:"employment:employment"`
+	PutCode        int      `json:"put-code" xml:"put-code"`
+	DepartmentName string   `json:"department-name" xml:"department-name"`
+	RoleTitle      string   `json:"role-title" xml:"role-title"`
+	Organization   Org      `json:"organization" xml:"organization"`
+	StartDate      DateYear `json:"start-date" xml:"start-date"`
 }
 
 func handleGetEmployment(w http.ResponseWriter, r *http.Request) {
 	putCode, _ := strconv.Atoi(r.PathValue("putCode"))
 
-	response := map[string]interface{}{
-		"put-code":        putCode,
-		"department-name": "Mock Department",
-		"role-title":      "Mock Researcher",
-		"organization":    map[string]string{"name": "Mock Org"},
-		"start-date": map[string]interface{}{
-			"year": map[string]string{"value": "2020"},
+	response := GenericEmploymentResponse{
+		PutCode:        putCode,
+		DepartmentName: "Mock Department",
+		RoleTitle:      "Mock Researcher",
+		Organization:   Org{Name: "Mock Org"},
+		StartDate: DateYear{
+			Year: Value{Value: "2020"},
 		},
 	}
-	json.NewEncoder(w).Encode(response)
+	writeResponse(w, r, response)
 }
 
 func handlePostEmployment(w http.ResponseWriter, r *http.Request) {
@@ -449,9 +524,12 @@ func handlePostEmployment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Location", fmt.Sprintf("https://api.orcid.org/v3.0/%s/employment/%d", orcid, newPutCode))
 	w.WriteHeader(http.StatusCreated)
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"put-code": newPutCode,
-	})
+	type PutCodeResponse struct {
+		XMLName xml.Name `json:"-" xml:"response"`
+		PutCode int      `json:"put-code" xml:"put-code"`
+	}
+
+	writeResponse(w, r, PutCodeResponse{PutCode: newPutCode})
 }
 
 func handlePutEmployment(w http.ResponseWriter, r *http.Request) {
@@ -461,10 +539,13 @@ func handlePutEmployment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Location", fmt.Sprintf("https://api.orcid.org/v3.0/%s/employment/%s", orcid, putCode))
 	w.WriteHeader(http.StatusOK)
 
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"put-code": putCode,
-		"status":   "updated",
-	})
+	type UpdateResponse struct {
+		XMLName xml.Name `json:"-" xml:"response"`
+		PutCode string   `json:"put-code" xml:"put-code"`
+		Status  string   `json:"status" xml:"status"`
+	}
+
+	writeResponse(w, r, UpdateResponse{PutCode: putCode, Status: "updated"})
 }
 
 func handleSearch(w http.ResponseWriter, r *http.Request) {
@@ -489,7 +570,7 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	json.NewEncoder(w).Encode(resp)
+	writeResponse(w, r, resp)
 }
 
 func createMockRecord(orcid, givenName, familyName, bio string) OrcidRecord {
