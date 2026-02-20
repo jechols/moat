@@ -208,6 +208,17 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, opts))
 	slog.SetDefault(logger)
 
+	handler := setupRouter()
+
+	port := getPort()
+	fmt.Printf("ORCID v3 Mock Service running on %s (Version: %s)\n", port, Version)
+	fmt.Printf("Try: curl -X POST http://localhost%s/oauth/token -d 'client_id=APP-123&grant_type=client_credentials'\n", port)
+	if err := http.ListenAndServe(port, handler); err != nil {
+		slog.Error("Unable to start MOAT", "error", err)
+	}
+}
+
+func setupRouter() http.Handler {
 	mux := http.NewServeMux()
 
 	// 1. OAuth Token Endpoint
@@ -232,14 +243,7 @@ func main() {
 	mux.HandleFunc("GET /v3.0/search", handleSearch)
 
 	// Middleware for logging and content type
-	handler := middleware(mux)
-
-	port := getPort()
-	fmt.Printf("ORCID v3 Mock Service running on %s (Version: %s)\n", port, Version)
-	fmt.Printf("Try: curl -X POST http://localhost%s/oauth/token -d 'client_id=APP-123&grant_type=client_credentials'\n", port)
-	if err := http.ListenAndServe(port, handler); err != nil {
-		slog.Error("Unable to start MOAT", "error", err)
-	}
+	return middleware(mux)
 }
 
 func middleware(next http.Handler) http.Handler {
