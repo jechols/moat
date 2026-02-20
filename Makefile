@@ -6,4 +6,4 @@ bin:
 
 .PHONY: clean
 clean:
-	rm bin/moat
+	rm -f bin/*
