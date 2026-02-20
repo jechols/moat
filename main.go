@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"moat/models"
 )
 
 // --- Configuration ---
@@ -52,7 +54,7 @@ type TokenResponse struct {
 type OrcidRecord struct {
 	XMLName         xml.Name        `json:"-" xml:"record"`
 	OrcidIdentifier OrcidIdentifier `json:"orcid-identifier" xml:"orcid-identifier"`
-	Person          Person          `json:"person" xml:"person"`
+	Person          models.Person   `json:"person" xml:"person"`
 	Activities      Activities      `json:"activities-summary" xml:"activities-summary"`
 }
 
@@ -60,43 +62,6 @@ type OrcidIdentifier struct {
 	Uri  string `json:"uri" xml:"uri"`
 	Path string `json:"path" xml:"path"`
 	Host string `json:"host" xml:"host"`
-}
-
-type Person struct {
-	Name           Name            `json:"name" xml:"name"`
-	Biography      *Biography      `json:"biography,omitempty" xml:"biography,omitempty"`
-	Emails         *Emails         `json:"emails,omitempty" xml:"emails,omitempty"`
-	ResearcherUrls *ResearcherUrls `json:"researcher-urls,omitempty" xml:"researcher-urls,omitempty"`
-}
-
-type Biography struct {
-	Content string `json:"content" xml:"content"`
-}
-
-type Emails struct {
-	Email []Email `json:"email" xml:"email"`
-}
-
-type Email struct {
-	Email      string `json:"email" xml:"email"`
-	Verified   bool   `json:"verified" xml:"verified"`
-	Primary    bool   `json:"primary" xml:"primary"`
-	Visibility string `json:"visibility" xml:"visibility"`
-}
-
-type ResearcherUrls struct {
-	ResearcherUrl []ResearcherUrl `json:"researcher-url" xml:"researcher-url"`
-}
-
-type ResearcherUrl struct {
-	UrlName string `json:"url-name" xml:"url-name"`
-	Url     Value  `json:"url" xml:"url"`
-}
-
-type Name struct {
-	GivenNames Value `json:"given-names" xml:"given-names"`
-	FamilyName Value `json:"family-name" xml:"family-name"`
-	CreditName Value `json:"credit-name" xml:"credit-name"`
 }
 
 type Value struct {
@@ -578,40 +543,76 @@ func handleSearch(w http.ResponseWriter, r *http.Request) {
 }
 
 func createMockRecord(orcid, givenName, familyName, bio string) OrcidRecord {
+	now := time.Now().UTC().Format("2006-01-02T15:04:05Z")
+	strPtr := func(s string) *string { return &s }
+
+	person := models.Person{
+		Path: orcid,
+		Name: &models.PersonName{
+			Visibility:       "PUBLIC",
+			CreatedDate:      strPtr(now),
+			LastModifiedDate: strPtr(now),
+			GivenNames:       givenName,
+			FamilyName:       familyName,
+			CreditName:       fmt.Sprintf("%s. %s", string(givenName[0]), familyName),
+		},
+		Biography: &models.Biography{
+			Visibility:       "PUBLIC",
+			CreatedDate:      strPtr(now),
+			LastModifiedDate: strPtr(now),
+			Content:          bio,
+		},
+		Emails: &models.Emails{
+			Emails: []*models.Email{
+				{
+					Visibility:       "PUBLIC",
+					CreatedDate:      strPtr(now),
+					LastModifiedDate: strPtr(now),
+					Email:            fmt.Sprintf("%s.%s@mock.edu", strings.ToLower(givenName), strings.ToLower(familyName)),
+					Source: &models.Source{
+						SourceOrcid: &models.SourceOrcid{
+							Uri:  fmt.Sprintf("https://orcid.org/%s", orcid),
+							Path: orcid,
+							Host: "orcid.org",
+						},
+						SourceName: &models.SourceName{
+							Value: "MOAT Service",
+						},
+					},
+				},
+			},
+		},
+		ResearcherUrls: &models.ResearcherUrls{
+			LastModifiedDate: strPtr(now),
+			ResearcherUrls: []*models.ResearcherUrl{
+				{
+					Visibility:       "PUBLIC",
+					CreatedDate:      strPtr(now),
+					LastModifiedDate: strPtr(now),
+					UrlName:          "Personal Website",
+					Url:              fmt.Sprintf("https://%s.%s.mock", strings.ToLower(givenName), strings.ToLower(familyName)),
+					Source: &models.Source{
+						SourceOrcid: &models.SourceOrcid{
+							Uri:  fmt.Sprintf("https://orcid.org/%s", orcid),
+							Path: orcid,
+							Host: "orcid.org",
+						},
+						SourceName: &models.SourceName{
+							Value: "MOAT Service",
+						},
+					},
+				},
+			},
+		},
+	}
+
 	return OrcidRecord{
 		OrcidIdentifier: OrcidIdentifier{
 			Uri:  fmt.Sprintf("https://orcid.org/%s", orcid),
 			Path: orcid,
 			Host: "orcid.org",
 		},
-		Person: Person{
-			Name: Name{
-				GivenNames: Value{Value: givenName},
-				FamilyName: Value{Value: familyName},
-				CreditName: Value{Value: fmt.Sprintf("%s. %s", string(givenName[0]), familyName)},
-			},
-			Biography: &Biography{
-				Content: bio,
-			},
-			Emails: &Emails{
-				Email: []Email{
-					{
-						Email:      fmt.Sprintf("%s.%s@mock.edu", strings.ToLower(givenName), strings.ToLower(familyName)),
-						Verified:   true,
-						Primary:    true,
-						Visibility: "PUBLIC",
-					},
-				},
-			},
-			ResearcherUrls: &ResearcherUrls{
-				ResearcherUrl: []ResearcherUrl{
-					{
-						UrlName: "Personal Website",
-						Url:     Value{Value: fmt.Sprintf("https://%s.%s.mock", strings.ToLower(givenName), strings.ToLower(familyName))},
-					},
-				},
-			},
-		},
+		Person: person,
 		Activities: Activities{
 			Works: WorkSummaryGroup{
 				Group: []WorkGroup{

@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+
+	"moat/models"
 )
 
 func TestHandleAuthorize(t *testing.T) {
@@ -106,13 +108,13 @@ func TestHandleGetPerson(t *testing.T) {
 		t.Errorf("Expected status OK, got %v", w.Code)
 	}
 
-	var person Person
+	var person models.Person
 	if err := json.NewDecoder(w.Body).Decode(&person); err != nil {
 		t.Errorf("Failed to decode response: %v", err)
 	}
 
-	if person.Name.GivenNames.Value != "Sofia" {
-		t.Errorf("Expected given name Sofia, got %s", person.Name.GivenNames.Value)
+	if person.Name.GivenNames != "Sofia" {
+		t.Errorf("Expected given name Sofia, got %s", person.Name.GivenNames)
 	}
 }
 
