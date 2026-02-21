@@ -7,3 +7,8 @@ bin:
 .PHONY: clean
 clean:
 	rm -f bin/*
+
+
+.PHONY: test
+test:
+	go test ./...

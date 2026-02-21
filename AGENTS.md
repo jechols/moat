@@ -32,19 +32,26 @@ environment variables to override.
 MOAT_PORT=9090 ./bin/moat
 ```
 
-### Testing (Manual)
-There are no automated tests (`*_test.go`). Verify functionality using `curl`:
+### Testing
+
+#### Automated Tests
+
+The project includes unit tests covering core functionality. Run them with:
 
 ```bash
-# Get OAuth Token
-curl -X POST http://localhost:8080/oauth/token -d 'client_id=APP-123&grant_type=client_credentials'
-
-# Get Record
-curl http://localhost:8080/v3.0/0000-0001-2345-6789/record
-
-# Search
-curl "http://localhost:8080/v3.0/search?q=test"
+make test
 ```
+
+#### Manual Verification
+
+Do **not** use `curl` for manual testing (it is restricted). Instead, use the
+`fetch` tool to verify accessible endpoints.
+
+- **Get Record**: Fetch `http://localhost:8080/v3.0/0000-0001-2345-6789/record`
+- **Search**: Fetch `http://localhost:8080/v3.0/search?q=test`
+
+For POST endpoints (like `/oauth/token`), use the unit tests or a temporary Go
+script to verify behavior.
 
 ## Code Structure
 
