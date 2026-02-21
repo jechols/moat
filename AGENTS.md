@@ -9,7 +9,8 @@ operations (Works, Employment) without relying on the external ORCID sandbox.
 ## Environment & Setup
 
 - **Language**: Go
-- **Go Version Note**: `go.mod` specifies `go 1.25.3`. **Do not alter this**.
+- **Go Version Note**: `go.mod` must not be changed. Tests will run just fine
+  with whatever version is installed.
 - **Dependencies**: Standard library only (no external modules).
 
 ## Essential Commands
